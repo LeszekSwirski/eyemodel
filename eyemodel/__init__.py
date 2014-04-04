@@ -219,11 +219,12 @@ class Renderer():
                     blender_args += ["--render-frame", "0"]          # Render frame 0
 
             # Write script to error log (
-            with open("blender_err.log","w") as blender_err_file:
+            with open("blender_err.log", "w") as blender_err_file:
                 if sys.platform == 'win32':
                     blender_err_file.write(subprocess.list2cmdline(blender_args))
                 else:
-                    blender_err_file.write(" ".join('"{}"'.format(arg) if " " in arg else arg for arg in blender_args))
+                    blender_err_file.write(" ".join('"{}"'.format(arg) if " " in arg else arg
+                                                    for arg in blender_args))
 
                 blender_err_file.write("\n\n")
                 
