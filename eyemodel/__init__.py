@@ -13,11 +13,37 @@ import time
 SCRIPT_PATH = sys.arg[0] if __name__ == "__main__" else __file__
 SCRIPT_DIR = os.path.dirname(SCRIPT_PATH)
 
-BLENDER_PATH = "C:/Program Files/Blender Foundation/Blender/blender.exe"
-
 MODEL_PATH = os.path.join(SCRIPT_DIR, "Swirski-EyeModel.blend")
 TEXTURE_PATH = os.path.join(SCRIPT_DIR, "textures")
 BLENDER_SCRIPT_TEMPLATE = os.path.join(SCRIPT_DIR, "blender_script.py.template")
+
+
+def get_blender_path():
+    def isexecutable(path):
+        return os.path.isfile(path) and os.access(path, os.X_OK)
+
+    # Get blender from environment if it's set
+    if "BLENDER_PATH" in os.environ:
+        path = os.environ["BLENDER_PATH"]
+        if isexecutable(path):
+            return path
+
+    # If blender is on the path, just rely on the OS's path search
+    if isexecutable("blender"):
+        return "blender"
+
+    # Try some default values
+    if sys.platform == "win32":
+        paths = ["C:/Program Files/Blender Foundation/Blender/blender.exe",
+                 "C:/Program Files (x86)/Blender Foundation/Blender/blender.exe"]
+    else:
+        paths = ["/usr/local/bin/blender", "/usr/bin/blender", "/bin/blender"]
+
+    for path in paths:
+        if isexecutable(path):
+            return path
+
+    raise Exception("Blender not found, try setting the BLENDER_PATH environment variable")
 
 
 class Light(collections.namedtuple('Light', ["location", "target", "size", "strength", "view_angle"])):
@@ -179,19 +205,30 @@ class Renderer():
             with tempfile.NamedTemporaryFile(suffix="0000", delete=False) as blender_outfile:
                 pass
 
-            blender_args = [BLENDER_PATH,
-                            MODEL_PATH,
-                            "-y",
-                            "-P", blender_script_file.name,
-                            "-o", blender_outfile.name[:-4]+"####",
-                            "-F", render_format,
-                            "-x", "0",]
+            blender_args = [get_blender_path(),
+                            MODEL_PATH,                              # Load model
+                            "--enable-autoexec",                     # Automatic python script execution
+                            "--verbose", "0",                        # No debug output
+                            "--python", blender_script_file.name,    # Run the temporary blender script file
+                            "-o", blender_outfile.name[:-4]+"####",  # Render output to temporary file
+                            "--render-format", render_format,        # Set render format (e.g. Jpeg) 
+                            "--use-extension", "0",]                 # Don't append the file extension
             if background:
-                blender_args += ["-b"]
+                blender_args += ["--background"]                     # Load the file in the background (no UI)
                 if self.render_samples > 0:
-                    blender_args += ["-f", "0"]
+                    blender_args += ["--render-frame", "0"]          # Render frame 0
 
+            # Write script to error log (
             with open("blender_err.log","w") as blender_err_file:
+                if sys.platform == 'win32':
+                    blender_err_file.write(subprocess.list2cmdline(blender_args))
+                else:
+                    blender_err_file.write(" ".join('"{}"'.format(arg) if " " in arg else arg for arg in blender_args))
+
+                blender_err_file.write("\n\n")
+                
+                blender_err_file.write("{0}:\n".format(blender_script_file.name))
+                blender_err_file.write("------\n")
                 blender_err_file.write("\n".join(
                     "{: 4} | {}".format(i+1,x)
                     for i,x in enumerate(blender_script.split("\n"))))
@@ -212,7 +249,10 @@ class Renderer():
                 shutil.copy(blender_outfile.name, path)
                 print(("Moved image to {}".format(path)))
 
-        except subprocess.CalledProcessError:
+            # Remove error log if no errors occured
+            os.remove("blender_err.log")
+
+        except:
             with open("blender_err.log") as blender_err_file:
                 print(blender_err_file.read())
 
