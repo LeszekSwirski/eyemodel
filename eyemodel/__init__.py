@@ -9,6 +9,13 @@ import subprocess
 import tempfile
 import shutil
 import time
+import traceback
+import threading
+import re
+try:
+    from Queue import Queue, Empty
+except ImportError:
+    from queue import Queue, Empty  # python 3.x
 
 SCRIPT_PATH = sys.arg[0] if __name__ == "__main__" else __file__
 SCRIPT_DIR = os.path.dirname(SCRIPT_PATH)
@@ -16,6 +23,29 @@ SCRIPT_DIR = os.path.dirname(SCRIPT_PATH)
 MODEL_PATH = os.path.join(SCRIPT_DIR, "Swirski-EyeModel.blend")
 TEXTURE_PATH = os.path.join(SCRIPT_DIR, "textures")
 BLENDER_SCRIPT_TEMPLATE = os.path.join(SCRIPT_DIR, "blender_script.py.template")
+
+RENDER_LINE_RE = re.compile(r"""
+    Fra: \s* (?P<frame>\d+) \s*                     # Frame number
+    Mem: \s* (?P<mem>[\d.]+\S) \s*                  # Memory use
+        \(
+        [\d.]+\S \s*,\s*
+        Peak \s* (?P<mempeak>[\d.]+\S)              # Peak memory
+        \)
+    \s*\|\s*
+    Remaining: \s* (?P<rem>[\d:.]+)                 # Remaining time
+    \s*\|\s*
+    Mem: \s* (?P<mem2>[\d.]+\S) \s*,\s*             # More memory use?
+    Peak: \s* (?P<mempeak2>[\d.]+\S)                # And more peak memory?
+    \s*\|\s*
+    (?P<rig>[^,|]+) \s*,\s* (?P<layer>[^,|]+)       # Rig and layer name
+    \s*\|\s*
+    Path\ Tracing\ Tile \s+
+        (?P<tile>\d+)/(?P<tiles>\d+)                # Tile num
+    \s*,\s*
+    Sample \s+
+        (?P<sample>\d+)/(?P<samples>\d+)            # Sample num
+    \s*
+""", flags=re.VERBOSE)
 
 
 def get_blender_path():
@@ -235,23 +265,69 @@ class Renderer():
                     for i,x in enumerate(blender_script.split("\n"))))
                 blender_err_file.write("\n------\n")
 
-            # Sometimes blender fails in rendering, so retry until success
-            while True:
-                try:
-                    subprocess.check_call(blender_args)
-                    break
-                except:
-                    print("Blender call failed, retrying in 1 sec")
-                    time.sleep(1)
+                while True:
+                    try:
+                        def enqueue_output(out, queue, name):
+                            for line in iter(out.readline, b''):
+                                queue.put((name, line.rstrip()))
+                            out.close()
 
-            if background and self.render_samples > 0:
-                if os.path.exists(path):
-                    os.remove(path)
-                shutil.copy(blender_outfile.name, path)
-                print(("Moved image to {}".format(path)))
+                        p = subprocess.Popen(blender_args, bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+                        q = Queue()
+                        tout = threading.Thread(target=enqueue_output, args=(p.stdout, q, "out"))
+                        tout.daemon = True  # thread dies with the program
+                        terr = threading.Thread(target=enqueue_output, args=(p.stderr, q, "err"))
+                        terr.daemon = True  # thread dies with the program
+                        tout.start()
+                        terr.start()
+
+                        print "Starting blender"
+
+                        while tout.isAlive() or terr.isAlive():
+                            try:
+                                line = q.get(timeout=0.1)
+                            except Empty:
+                                pass
+                            else:
+                                if line[0] == "out":
+                                    m = RENDER_LINE_RE.match(line[1])
+                                    if m:
+                                        tile = int(m.group("tile"))
+                                        tiles = int(m.group("tiles"))
+                                        sample = int(m.group("sample"))
+                                        samples = int(m.group("samples"))
+                                        print "Rendered {percent}%, time remaining: {rem} (tile {tile}/{tiles}, sample {sample}/{samples})".format(
+                                            percent=100 * ((tile-1)*samples + (sample-1)) / (tiles*samples),
+                                            **m.groupdict()
+                                        )
+                                
+                                blender_err_file.write(line[1])
+                                blender_err_file.write("\n")
+
+                        print "Blender quit"
+
+                        break
+
+                    except KeyboardInterrupt:
+                        raise
+                    except:
+                        # Sometimes blender fails in rendering, so retry until success
+                        traceback.print_exc()
+                        print("Blender call failed, retrying in 1 sec")
+                        time.sleep(1)
+
+                if background and self.render_samples > 0:
+                    if os.path.exists(path):
+                        os.remove(path)
+                    shutil.copy(blender_outfile.name, path)
+                    print(("Moved image to {}".format(path)))
 
             # Remove error log if no errors occured
             os.remove("blender_err.log")
+
+        except KeyboardInterrupt:
+            raise
 
         except:
             with open("blender_err.log") as blender_err_file:
