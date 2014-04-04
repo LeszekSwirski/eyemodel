@@ -17,7 +17,7 @@ BLENDER_PATH = "C:/Program Files/Blender Foundation/Blender/blender.exe"
 
 MODEL_PATH = os.path.join(SCRIPT_DIR, "Swirski-EyeModel.blend")
 TEXTURE_PATH = os.path.join(SCRIPT_DIR, "textures")
-BLENDER_SCRIPT_TEMPLATE = os.path.join(SCRIPT_DIR, "script_template.py")
+BLENDER_SCRIPT_TEMPLATE = os.path.join(SCRIPT_DIR, "blender_script.py.template")
 
 
 class Light(collections.namedtuple('Light', ["location", "target", "size", "strength", "view_angle"])):
