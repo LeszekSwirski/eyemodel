@@ -242,10 +242,13 @@ scene.cycles.aa_samples = input_render_samples
 scene.update()
 
 # Use CUDA if possible
-try:
-    bpy.context.user_preferences.system.compute_device_type = 'CUDA'
-except:
-    pass
+if bpy.context.user_preferences.system.compute_device_type != 'CUDA':
+    try:
+        print("Trying to set compute device to CUDA")
+        bpy.context.user_preferences.system.compute_device_type = 'CUDA'
+    except:
+        print("Warning: Setting compute device to CUDA failed, using CPU rendering (will be much slower)")
+        bpy.context.user_preferences.system.compute_device_type = 'None'
 
 if output_params_path:
     def mlabVec(vec):
