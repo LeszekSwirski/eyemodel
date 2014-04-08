@@ -67,7 +67,8 @@ def get_blender_path():
         paths = ["C:/Program Files/Blender Foundation/Blender/blender.exe",
                  "C:/Program Files (x86)/Blender Foundation/Blender/blender.exe"]
     else:
-        paths = ["/usr/local/bin/blender", "/usr/bin/blender", "/bin/blender"]
+        paths = ["/usr/local/bin/blender", "/usr/bin/blender", "/bin/blender",
+                 "/Applications/Blender/blender.app/Contents/MacOS/blender"]
 
     for path in paths:
         if isexecutable(path):
