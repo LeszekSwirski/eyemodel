@@ -242,7 +242,7 @@ scene.cycles.aa_samples = input_render_samples
 scene.update()
 
 # Use CUDA if possible
-if bpy.context.user_preferences.system.compute_device_type != 'CUDA':
+if input_use_cuda and bpy.context.user_preferences.system.compute_device_type != 'CUDA':
     try:
         print("Trying to set compute device to CUDA")
         bpy.context.user_preferences.system.compute_device_type = 'CUDA'
