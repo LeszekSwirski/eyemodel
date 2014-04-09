@@ -138,7 +138,7 @@ class Renderer():
 
         self.render_samples = 20
 
-    def render(self, path, params=None, background=True):
+    def render(self, path, params=None, background=True, cuda=True):
         __, ext = os.path.splitext(path)
         ext = ext.lower()
         if ext == ".png":
@@ -176,6 +176,7 @@ class Renderer():
             self.focus_distance = math.sqrt(sum((a-b)**2 for a,b in zip(self.camera_position, self.camera_target)))
 
         inputs = {
+            "input_use_cuda": cuda,
             "input_eye_radius": self.eye_radius,
             "input_eye_pos": "Vector({})".format(list(self.eye_position)),
             "input_eye_target": "Vector({})".format(list(self.eye_target)),
