@@ -371,7 +371,7 @@ if output_params_path:
             "    end",
             "end",
             "pupil_points = camera_project(camera, pupil_refracted_vertices);",
-            "pupil_points = pupil_points(:, convhull(pupil_points'));",
+            "pupil_points = pupil_points(:, convhull(pupil_points(1,:)', pupil_points(2,:)'));",
             "plot(camera.resolution(1)/2 + pupil_points(1,:), camera.resolution(2)/2 - pupil_points(2,:), '-m', 'LineWidth', 1.5);",
         ]
         for i,light in enumerate(input_lights):
