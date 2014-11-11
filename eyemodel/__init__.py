@@ -154,11 +154,6 @@ class Renderer():
         if not os.path.exists(new_ireye_path):
             raise RuntimeError("Eye texture {} does not exist. Create one in the textures folder.".format("ireye-{}.png".format(self.iris)))
 
-        ireye_path = os.path.join(TEXTURE_PATH, "ireye.png")
-        if os.path.exists(ireye_path):
-            os.remove(ireye_path)
-        shutil.copy(new_ireye_path, ireye_path)
-
         with open(BLENDER_SCRIPT_TEMPLATE) as blender_script_template_file:
             blender_script_template = blender_script_template_file.read()
         blender_script_template = blender_script_template.replace("{","{{")
@@ -182,6 +177,8 @@ class Renderer():
             "input_eye_target": "Vector({})".format(list(self.eye_target)),
             "input_eye_up": "Vector({})".format(list(self.eye_up)),
             "input_eye_closedness": self.eye_closedness,
+
+            "input_iris": "'{}'".format(self.iris),
 
             "input_eye_cornea_refrative_index": self.cornea_refractive_index,
 

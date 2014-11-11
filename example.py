@@ -23,6 +23,7 @@ with eyemodel.Renderer() as r:
     r.camera_position = [20, -50, -10]
     r.camera_target = [0, -r.eye_radius, 0]
     r.eye_closedness = 0.2
+    r.iris = "light"
 
     r.lights = [
         eyemodel.Light(

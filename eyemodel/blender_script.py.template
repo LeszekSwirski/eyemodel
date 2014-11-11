@@ -212,6 +212,8 @@ irisVertices = [eyeL.matrix_local * v.co for v in eyeL.data.vertices if irisGrou
 irisVertexCentre = functools.reduce(lambda x,y: x+y, irisVertices)/len(irisVertices)
 iris_radius = sum((v-irisVertexCentre).length for v in irisVertices)/len(irisVertices)
 
+bpy.data.images['eye texture'].filepath = '//textures\\ireye-{}.png'.format(input_iris)
+
 cornea_material.node_tree.nodes['TrickyGlass'].inputs[
     cornea_material.node_tree.nodes['TrickyGlass'].inputs.find('IOR') # workaround for blender bug
 ].default_value = input_eye_cornea_refrative_index
