@@ -407,3 +407,4 @@ if output_params_path:
         #params_file.write("camera focus distance = {}\n".format(input_cam_focus_distance))
         #params_file.write("camera fstop = {}\n".format(input_cam_fstop))
         #params_file.write("image size = {}\n".format(tuple(input_cam_image_size)))
+# vim: ft=python
