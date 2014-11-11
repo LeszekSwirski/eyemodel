@@ -306,9 +306,12 @@ class Renderer():
                                 
                                 blender_err_file.write(line[1])
                                 blender_err_file.write("\n")
+                        
+                        if p.wait() != 0:
+                            print "Blender error"
+                            raise subprocess.CalledProcessError(p.returncode, blender_args)
 
                         print "Blender quit"
-
                         break
 
                     except KeyboardInterrupt:
@@ -332,8 +335,9 @@ class Renderer():
             raise
 
         except:
-            with open("blender_err.log") as blender_err_file:
-                print(blender_err_file.read())
+            if os.path.exists("blender_err.log"):
+                with open("blender_err.log") as blender_err_file:
+                    print(blender_err_file.read())
 
             raise
         finally:
