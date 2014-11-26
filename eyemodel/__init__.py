@@ -192,7 +192,7 @@ class Renderer():
             camera_noise_seed = self.camera_noise_seed
 
         try:
-            with tempfile.NamedTemporaryFile("w+", suffix=".log", delete=False) as blender_err_file:
+            with tempfile.NamedTemporaryFile("w", suffix=".log", delete=False) as blender_err_file:
                 blender_err_file_name = blender_err_file.name
 
             inputs = {
@@ -255,7 +255,7 @@ class Renderer():
                 "\n        f.write('\\n'.join(traceback.format_exception(*sys.exc_info())))"
                 "\n    sys.exit(1)")
 
-            with tempfile.NamedTemporaryFile("w+", suffix=".py", delete=False) as blender_script_file:
+            with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as blender_script_file:
                 blender_script_file.write(blender_script)
 
             try:
@@ -275,8 +275,8 @@ class Renderer():
                     if self.render_samples > 0:
                         blender_args += ["--render-frame", "0"]          # Render frame 0
 
-                # Write script to error log (
-                with open(blender_err_file_name, "w+") as blender_err_file:
+                # Write script to error log
+                with open(blender_err_file_name, "a") as blender_err_file:
                     if sys.platform == 'win32':
                         blender_err_file.write(subprocess.list2cmdline(blender_args))
                     else:
@@ -332,7 +332,7 @@ class Renderer():
                                             **m.groupdict()
                                         ))
                                 
-                                with open(blender_err_file_name, "w+") as blender_err_file:
+                                with open(blender_err_file_name, "a") as blender_err_file:
                                     blender_err_file.write(line[1])
                                     blender_err_file.write("\n")
                         
