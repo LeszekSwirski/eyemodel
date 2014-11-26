@@ -168,7 +168,9 @@ class Renderer():
             print("WARNING: No lights in scene")
 
         if self.focus_distance is None:
-            self.focus_distance = math.sqrt(sum((a-b)**2 for a,b in zip(self.camera_position, self.camera_target)))
+            focus_distance = math.sqrt(sum((a-b)**2 for a,b in zip(self.camera_position, self.camera_target)))
+        else:
+            focus_distance = self.focus_distance
 
         inputs = {
             "input_use_cuda": cuda,
@@ -190,7 +192,7 @@ class Renderer():
 
             "input_cam_image_size": list(self.image_size),
             "input_cam_focal_length": self.focal_length,
-            "input_cam_focus_distance": self.focus_distance,
+            "input_cam_focus_distance": focus_distance,
             "input_cam_fstop": self.fstop,
 
             "input_lights": ["Light({})".format(
