@@ -27,11 +27,19 @@ with eyemodel.Renderer() as r:
 
     r.lights = [
         eyemodel.Light(
+            type="sun",
+            location = [10, -10, 100],
+            strength = 10,
+            target = [0,0,0]),
+        eyemodel.Light(
+            strength = 1,
             location = [15, -50, -10],
             target = r.camera_target),
         eyemodel.Light(
+            strength = 1,
             location = [25, -50, -10],
             target = r.camera_target)
     ]
 
+    r.render_samples = 50
     r.render("example.png", "example.m")

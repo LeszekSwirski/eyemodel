@@ -78,9 +78,9 @@ def get_blender_path():
     raise Exception("Blender not found, try setting the BLENDER_PATH environment variable")
 
 
-class Light(collections.namedtuple('Light', ["location", "target", "size", "strength", "view_angle"])):
-    def __new__(cls, location, target, size=2, strength=2, view_angle=45):
-        return super(Light, cls).__new__(cls, location, target, size, strength, view_angle)
+class Light(collections.namedtuple('Light', ["location", "target", "type", "size", "strength", "view_angle"])):
+    def __new__(cls, location, target, type="spot", size=2, strength=2, view_angle=45):
+        return super(Light, cls).__new__(cls, location, target, type, size, strength, view_angle)
 
 
 class Renderer():
@@ -215,10 +215,11 @@ class Renderer():
             "input_cam_fstop": self.fstop,
 
             "input_lights": ["Light({})".format(
-                    ",".join("{} = {}".format(k,v) for k,v in
+                    ",".join("{}={}".format(k,v) for k,v in
                         {
                             "location": "Vector({})".format(list(l.location)),
                             "target": "Vector({})".format(list(l.target)),
+                            "type": '"{}"'.format(l.type),
                             "size": l.size,
                             "strength": l.strength,
                             "view_angle": l.view_angle

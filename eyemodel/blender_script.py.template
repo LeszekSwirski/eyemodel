@@ -14,7 +14,7 @@ try:
 except:
     np = None
 
-Light = collections.namedtuple("Light", ["location", "target", "size", "strength", "view_angle"])
+Light = collections.namedtuple("Light", ["location", "target", "type", "size", "strength", "view_angle"])
 
 $INPUTS
 
@@ -137,8 +137,12 @@ for obj in list(bpy.data.objects):
 
 # Add lights
 for i,light in enumerate(input_lights):
+    lamp_type = light.type.upper()
+    if lamp_type not in ["SPOT", "SUN"]:
+        raise Error("Light type must be 'sun' or 'spot'")
+
     # Create new lamp datablock
-    lamp_data = bpy.data.lamps.new(name="Lamp.{}".format(i), type='SPOT')
+    lamp_data = bpy.data.lamps.new(name="Lamp.{}".format(i), type=lamp_type)
 
     # Create new object with our lamp datablock
     lamp_object = bpy.data.objects.new(name="Lamp.{}".format(i), object_data=lamp_data)
@@ -156,12 +160,18 @@ for i,light in enumerate(input_lights):
             Matrix([[-1, 0, 0],
                     [ 0, 1, 0],
                     [ 0, 0,-1]]))
-    lamp_data.shadow_soft_size = input_to_world(light.size)
-    lamp_data.spot_size = light.view_angle*math.pi/180
-    lamp_data.spot_blend = 1.0
+
+    if lamp_type == "SPOT":    
+        lamp_data.shadow_soft_size = input_to_world(light.size)
+        lamp_data.spot_size = light.view_angle*math.pi/180
+        lamp_data.spot_blend = 1.0
+        lamp_data.show_cone = True
+
+    if lamp_type == "SUN":
+        lamp_data.shadow_soft_size = 1.0
+
     lamp_data.node_tree.nodes['Emission'].inputs['Strength'].default_value = light.strength
-    lamp_data.cycles.use_multiple_importance_sample = True
-    lamp_data.show_cone = True
+    lamp_data.cycles.use_multiple_importance_sampling = True
 
 # Remove eye IK constraint
 for c in list(eyeLbone.constraints.values()):
