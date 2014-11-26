@@ -13,6 +13,7 @@ import traceback
 import threading
 import re
 import random
+import signal
 try:
     from Queue import Queue, Empty
 except ImportError:
@@ -142,7 +143,7 @@ class Renderer():
 
         self.camera_noise_seed = None
 
-    def render(self, path, params=None, background=True, cuda=True):
+    def render(self, path, params=None, background=True, cuda=True, attempts=5):
         __, ext = os.path.splitext(path)
         ext = ext.lower()
         if ext == ".png":
@@ -292,7 +293,8 @@ class Renderer():
                         for i,x in enumerate(blender_script.split("\n"))))
                     blender_err_file.write("\n------\n")
 
-                while True:
+                attempts = max(attempts,1)
+                for attempt in range(1, 1 + attempts):
                     try:
                         def enqueue_output(out, queue, name):
                             for line in iter(out.readline, b''):
@@ -302,7 +304,10 @@ class Renderer():
                                 queue.put((name, line))
                             out.close()
 
-                        p = subprocess.Popen(blender_args, bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                        if hasattr(os.sys, 'winver'):
+                            p = subprocess.Popen(blender_args, bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+                        else:
+                            p = subprocess.Popen(blender_args, bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
                         q = Queue()
                         tout = threading.Thread(target=enqueue_output, args=(p.stdout, q, "out"))
@@ -333,6 +338,8 @@ class Renderer():
                                         ))
                                 
                                 with open(blender_err_file_name, "a") as blender_err_file:
+                                    blender_err_file.write(line[0])
+                                    blender_err_file.write(" | ")
                                     blender_err_file.write(line[1])
                                     blender_err_file.write("\n")
                         
@@ -348,24 +355,46 @@ class Renderer():
                     except:
                         # Sometimes blender fails in rendering, so retry until success
                         traceback.print_exc()
-                        print("Blender call failed, retrying in 1 sec")
-                        time.sleep(1)
+                        if attempt < attempts:
+                            print("Blender call failed, retrying in 1 sec (attempt {} of {})".format(attempt, attempts))
+                            try:
+                                sleep_fail = True
+                                time.sleep(1)
+                                sleep_fail = False
+                            except:
+                                pass
+                            if sleep_fail:
+                                raise
+                        else:
+                            print("Blender call failed")
+                            raise
+                    finally:
+                        if p.poll() is None:
+                            print("Killing blender")
+                            if hasattr(os.sys, 'winver'):
+                                os.kill(p.pid, signal.CTRL_BREAK_EVENT)
+                            else:
+                                p.send_signal(signal.SIGKILL)
+                            p.wait()
+                            print("Blender killed")
 
                 if background and self.render_samples > 0:
                     if os.path.exists(path):
                         os.remove(path)
-                    shutil.copy(blender_outfile.name, path)
+                    shutil.move(blender_outfile.name, path)
                     print(("Moved image to {}".format(path)))
-
-            except KeyboardInterrupt:
-                raise
 
             except:
                 with open(blender_err_file_name) as blender_err_file:
                     print(blender_err_file.read())
 
                 raise
+
+            finally:
+                if os.path.exists(blender_outfile.name):
+                    os.remove(blender_outfile.name)
         finally:
+            # Sleep for a short time to let file handles get free'd
+            time.sleep(0.1)
             os.remove(blender_err_file.name)
             os.remove(blender_script_file.name)
-            #os.remove(blender_outfile.name)
