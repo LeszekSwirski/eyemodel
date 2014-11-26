@@ -7,6 +7,7 @@ import os
 import sys
 import functools
 import collections
+import random
 from mathutils import Vector, Matrix
 try:
     import numpy as np
@@ -32,6 +33,8 @@ pupilRbone = armature.pose.bones['eyepulpex.R']
 eyeRblinkbone = armature.pose.bones['eyeblink.R']
 
 cornea_material = bpy.data.materials['eye cornea']
+
+compositing_tree = scene.node_tree
 
 armature_matrix = armature.matrix_world
 
@@ -240,6 +243,14 @@ camera.dof_distance = input_to_world(input_cam_focus_distance)
 camera.cycles.aperture_fstop = input_cam_fstop
 
 scene.cycles.aa_samples = input_render_samples
+scene.cycles.seed = input_render_seed
+
+cam_rand = random.Random()
+cam_rand.seed(input_camera_noise_seed)
+compositing_tree.nodes["Line Noise"].inputs[0].default_value[0] = cam_rand.uniform(0,1)
+compositing_tree.nodes["Line Noise"].inputs[0].default_value[1] = cam_rand.uniform(0,1)
+compositing_tree.nodes["Shot Noise"].inputs[0].default_value[0] = cam_rand.uniform(0,1)
+compositing_tree.nodes["Shot Noise"].inputs[0].default_value[1] = cam_rand.uniform(0,1)
 
 scene.update()
 

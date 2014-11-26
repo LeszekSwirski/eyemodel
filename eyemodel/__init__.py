@@ -12,6 +12,7 @@ import time
 import traceback
 import threading
 import re
+import random
 try:
     from Queue import Queue, Empty
 except ImportError:
@@ -137,6 +138,9 @@ class Renderer():
         self.lights = []
 
         self.render_samples = 20
+        self.render_seed = None
+
+        self.camera_noise_seed = None
 
     def render(self, path, params=None, background=True, cuda=True):
         __, ext = os.path.splitext(path)
@@ -172,6 +176,21 @@ class Renderer():
         else:
             focus_distance = self.focus_distance
 
+        if sys.version_info.major < 3:
+            maxint = sys.maxint
+        else:
+            maxint = (2**sys.int_info.bits_per_digit) - 1
+
+        if self.render_seed is None:
+            render_seed = random.randint(0, maxint)
+        else:
+            render_seed = self.render_seed
+
+        if self.camera_noise_seed is None:
+            camera_noise_seed = random.randint(0, maxint)
+        else:
+            camera_noise_seed = self.camera_noise_seed
+
         inputs = {
             "input_use_cuda": cuda,
             "input_eye_radius": self.eye_radius,
@@ -206,6 +225,8 @@ class Renderer():
                         }.items())) for l in self.lights],
 
             "input_render_samples" : self.render_samples,
+            "input_render_seed" : render_seed,
+            "input_camera_noise_seed" : camera_noise_seed,
             "output_render_path" : "'{}'".format(path).replace("\\","/"),
         }
         if params:
