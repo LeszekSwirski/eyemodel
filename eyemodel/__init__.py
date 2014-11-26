@@ -292,7 +292,10 @@ class Renderer():
                     try:
                         def enqueue_output(out, queue, name):
                             for line in iter(out.readline, b''):
-                                queue.put((name, line.rstrip()))
+                                line = line.rstrip()
+                                if sys.version_info.major >= 3:
+                                    line = line.decode("utf-8")
+                                queue.put((name, line))
                             out.close()
 
                         p = subprocess.Popen(blender_args, bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -305,7 +308,7 @@ class Renderer():
                         tout.start()
                         terr.start()
 
-                        print "Starting blender"
+                        print("Starting blender")
 
                         while tout.isAlive() or terr.isAlive():
                             try:
@@ -320,19 +323,19 @@ class Renderer():
                                         tiles = int(m.group("tiles"))
                                         sample = int(m.group("sample"))
                                         samples = int(m.group("samples"))
-                                        print "Rendered {percent}%, time remaining: {rem} (tile {tile}/{tiles}, sample {sample}/{samples})".format(
+                                        print("Rendered {percent}%, time remaining: {rem} (tile {tile}/{tiles}, sample {sample}/{samples})".format(
                                             percent=100 * ((tile-1)*samples + (sample-1)) / (tiles*samples),
                                             **m.groupdict()
-                                        )
+                                        ))
                                 
                                 blender_err_file.write(line[1])
                                 blender_err_file.write("\n")
                         
                         if p.wait() != 0:
-                            print "Blender error"
+                            print("Blender error")
                             raise subprocess.CalledProcessError(p.returncode, blender_args)
 
-                        print "Blender quit"
+                        print("Blender quit")
                         break
 
                     except KeyboardInterrupt:
