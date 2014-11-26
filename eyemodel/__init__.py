@@ -14,6 +14,7 @@ import threading
 import re
 import random
 import signal
+import struct
 try:
     from Queue import Queue, Empty
 except ImportError:
@@ -177,10 +178,7 @@ class Renderer():
         else:
             focus_distance = self.focus_distance
 
-        if sys.version_info.major < 3:
-            maxint = sys.maxint
-        else:
-            maxint = (2**sys.int_info.bits_per_digit) - 1
+        maxint = int(2**(struct.calcsize("i")*8-1) - 1)
 
         if self.render_seed is None:
             render_seed = random.randint(0, maxint)

@@ -253,7 +253,7 @@ camera.dof_distance = input_to_world(input_cam_focus_distance)
 camera.cycles.aperture_fstop = input_cam_fstop
 
 scene.cycles.aa_samples = input_render_samples
-scene.cycles.seed = input_render_seed
+scene.cycles.seed = input_render_seed % (bpy.types.CyclesRenderSettings.seed[1]["max"] + 1)
 
 cam_rand = random.Random()
 cam_rand.seed(input_camera_noise_seed)
