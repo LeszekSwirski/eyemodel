@@ -191,102 +191,106 @@ class Renderer():
         else:
             camera_noise_seed = self.camera_noise_seed
 
-        inputs = {
-            "input_use_cuda": cuda,
-            "input_eye_radius": self.eye_radius,
-            "input_eye_pos": "Vector({})".format(list(self.eye_position)),
-            "input_eye_target": "Vector({})".format(list(self.eye_target)),
-            "input_eye_up": "Vector({})".format(list(self.eye_up)),
-            "input_eye_closedness": self.eye_closedness,
-
-            "input_iris": "'{}'".format(self.iris),
-
-            "input_eye_cornea_refrative_index": self.cornea_refractive_index,
-
-            "input_pupil_radius": self.pupil_radius,
-
-            "input_cam_pos": "Vector({})".format(list(self.camera_position)),
-            "input_cam_target": "Vector({})".format(list(self.camera_target)),
-            "input_cam_up": "Vector({})".format(list(self.camera_up)),
-
-            "input_cam_image_size": list(self.image_size),
-            "input_cam_focal_length": self.focal_length,
-            "input_cam_focus_distance": focus_distance,
-            "input_cam_fstop": self.fstop,
-
-            "input_lights": ["Light({})".format(
-                    ",".join("{}={}".format(k,v) for k,v in
-                        {
-                            "location": "Vector({})".format(list(l.location)),
-                            "target": "Vector({})".format(list(l.target)),
-                            "type": '"{}"'.format(l.type),
-                            "size": l.size,
-                            "strength": l.strength,
-                            "view_angle": l.view_angle
-                        }.items())) for l in self.lights],
-
-            "input_render_samples" : self.render_samples,
-            "input_render_seed" : render_seed,
-            "input_camera_noise_seed" : camera_noise_seed,
-            "output_render_path" : "'{}'".format(path).replace("\\","/"),
-        }
-        if params:
-            inputs["output_params_path"] = "'{}'".format(params).replace("\\","/")
-        else:
-            inputs["output_params_path"] = "None"
-
-        def inputVal(v):
-            if isinstance(v,list):
-                return '[{}]'.format(",".join(inputVal(x) for x in v))
-            else:
-                return str(v)
-
-        blender_script = blender_script_template.format("\n".join(
-                            "{} = {}".format(k,inputVal(v)) for k,v in inputs.items()))
-        blender_script = "\n".join("    " + x for x in blender_script.split("\n"))
-        blender_script = ("import sys\ntry:\n" + blender_script +
-            "\nexcept:"
-            "\n    import traceback"
-            "\n    with open('blender_err.log','a') as f:"
-            "\n        f.write('\\n'.join(traceback.format_exception(*sys.exc_info())))"
-            "\n    sys.exit(1)")
-
-        with tempfile.NamedTemporaryFile("w+", suffix=".py", delete=False) as blender_script_file:
-            blender_script_file.write(blender_script)
-
         try:
-            with tempfile.NamedTemporaryFile(suffix="0000", delete=False) as blender_outfile:
-                pass
+            with tempfile.NamedTemporaryFile("w+", suffix=".log", delete=False) as blender_err_file:
+                blender_err_file_name = blender_err_file.name
 
-            blender_args = [get_blender_path(),
-                            MODEL_PATH,                              # Load model
-                            "--enable-autoexec",                     # Automatic python script execution
-                            "--verbose", "0",                        # No debug output
-                            "--python", blender_script_file.name,    # Run the temporary blender script file
-                            "-o", blender_outfile.name[:-4]+"####",  # Render output to temporary file
-                            "--render-format", render_format,        # Set render format (e.g. Jpeg) 
-                            "--use-extension", "0",]                 # Don't append the file extension
-            if background:
-                blender_args += ["--background"]                     # Load the file in the background (no UI)
-                if self.render_samples > 0:
-                    blender_args += ["--render-frame", "0"]          # Render frame 0
+            inputs = {
+                "input_use_cuda": cuda,
+                "input_eye_radius": self.eye_radius,
+                "input_eye_pos": "Vector({})".format(list(self.eye_position)),
+                "input_eye_target": "Vector({})".format(list(self.eye_target)),
+                "input_eye_up": "Vector({})".format(list(self.eye_up)),
+                "input_eye_closedness": self.eye_closedness,
 
-            # Write script to error log (
-            with open("blender_err.log", "w") as blender_err_file:
-                if sys.platform == 'win32':
-                    blender_err_file.write(subprocess.list2cmdline(blender_args))
+                "input_iris": "'{}'".format(self.iris),
+
+                "input_eye_cornea_refrative_index": self.cornea_refractive_index,
+
+                "input_pupil_radius": self.pupil_radius,
+
+                "input_cam_pos": "Vector({})".format(list(self.camera_position)),
+                "input_cam_target": "Vector({})".format(list(self.camera_target)),
+                "input_cam_up": "Vector({})".format(list(self.camera_up)),
+
+                "input_cam_image_size": list(self.image_size),
+                "input_cam_focal_length": self.focal_length,
+                "input_cam_focus_distance": focus_distance,
+                "input_cam_fstop": self.fstop,
+
+                "input_lights": ["Light({})".format(
+                        ",".join("{}={}".format(k,v) for k,v in
+                            {
+                                "location": "Vector({})".format(list(l.location)),
+                                "target": "Vector({})".format(list(l.target)),
+                                "type": '"{}"'.format(l.type),
+                                "size": l.size,
+                                "strength": l.strength,
+                                "view_angle": l.view_angle
+                            }.items())) for l in self.lights],
+
+                "input_render_samples" : self.render_samples,
+                "input_render_seed" : render_seed,
+                "input_camera_noise_seed" : camera_noise_seed,
+                "output_render_path" : "'{}'".format(path).replace("\\","/"),
+            }
+            if params:
+                inputs["output_params_path"] = "'{}'".format(params).replace("\\","/")
+            else:
+                inputs["output_params_path"] = "None"
+
+            def inputVal(v):
+                if isinstance(v,list):
+                    return '[{}]'.format(",".join(inputVal(x) for x in v))
                 else:
-                    blender_err_file.write(" ".join('"{}"'.format(arg) if " " in arg else arg
-                                                    for arg in blender_args))
+                    return str(v)
 
-                blender_err_file.write("\n\n")
-                
-                blender_err_file.write("{0}:\n".format(blender_script_file.name))
-                blender_err_file.write("------\n")
-                blender_err_file.write("\n".join(
-                    "{: 4} | {}".format(i+1,x)
-                    for i,x in enumerate(blender_script.split("\n"))))
-                blender_err_file.write("\n------\n")
+            blender_script = blender_script_template.format("\n".join(
+                                "{} = {}".format(k,inputVal(v)) for k,v in inputs.items()))
+            blender_script = "\n".join("    " + x for x in blender_script.split("\n"))
+            blender_script = ("import sys\ntry:\n" + blender_script +
+                "\nexcept:"
+                "\n    import traceback"
+                "\n    with open(r'" + blender_err_file.name + "','a') as f:"
+                "\n        f.write('\\n'.join(traceback.format_exception(*sys.exc_info())))"
+                "\n    sys.exit(1)")
+
+            with tempfile.NamedTemporaryFile("w+", suffix=".py", delete=False) as blender_script_file:
+                blender_script_file.write(blender_script)
+
+            try:
+                with tempfile.NamedTemporaryFile(suffix="0000", delete=False) as blender_outfile:
+                    pass
+
+                blender_args = [get_blender_path(),
+                                MODEL_PATH,                              # Load model
+                                "--enable-autoexec",                     # Automatic python script execution
+                                "--verbose", "0",                        # No debug output
+                                "--python", blender_script_file.name,    # Run the temporary blender script file
+                                "-o", blender_outfile.name[:-4]+"####",  # Render output to temporary file
+                                "--render-format", render_format,        # Set render format (e.g. Jpeg) 
+                                "--use-extension", "0",]                 # Don't append the file extension
+                if background:
+                    blender_args += ["--background"]                     # Load the file in the background (no UI)
+                    if self.render_samples > 0:
+                        blender_args += ["--render-frame", "0"]          # Render frame 0
+
+                # Write script to error log (
+                with open(blender_err_file_name, "w+") as blender_err_file:
+                    if sys.platform == 'win32':
+                        blender_err_file.write(subprocess.list2cmdline(blender_args))
+                    else:
+                        blender_err_file.write(" ".join('"{}"'.format(arg) if " " in arg else arg
+                                                        for arg in blender_args))
+
+                    blender_err_file.write("\n\n")
+                    
+                    blender_err_file.write("{0}:\n".format(blender_script_file.name))
+                    blender_err_file.write("------\n")
+                    blender_err_file.write("\n".join(
+                        "{: 4} | {}".format(i+1,x)
+                        for i,x in enumerate(blender_script.split("\n"))))
+                    blender_err_file.write("\n------\n")
 
                 while True:
                     try:
@@ -328,8 +332,9 @@ class Renderer():
                                             **m.groupdict()
                                         ))
                                 
-                                blender_err_file.write(line[1])
-                                blender_err_file.write("\n")
+                                with open(blender_err_file_name, "w+") as blender_err_file:
+                                    blender_err_file.write(line[1])
+                                    blender_err_file.write("\n")
                         
                         if p.wait() != 0:
                             print("Blender error")
@@ -352,18 +357,15 @@ class Renderer():
                     shutil.copy(blender_outfile.name, path)
                     print(("Moved image to {}".format(path)))
 
-            # Remove error log if no errors occured
-            os.remove("blender_err.log")
+            except KeyboardInterrupt:
+                raise
 
-        except KeyboardInterrupt:
-            raise
-
-        except:
-            if os.path.exists("blender_err.log"):
-                with open("blender_err.log") as blender_err_file:
+            except:
+                with open(blender_err_file_name) as blender_err_file:
                     print(blender_err_file.read())
 
-            raise
+                raise
         finally:
+            os.remove(blender_err_file.name)
             os.remove(blender_script_file.name)
             #os.remove(blender_outfile.name)
