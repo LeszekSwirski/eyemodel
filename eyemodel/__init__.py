@@ -268,6 +268,7 @@ class Renderer():
                                 "--python", blender_script_file.name,    # Run the temporary blender script file
                                 "-o", blender_outfile.name[:-4]+"####",  # Render output to temporary file
                                 "--render-format", render_format,        # Set render format (e.g. Jpeg) 
+                                "-noaudio",                              # Don't use audio
                                 "--use-extension", "0",]                 # Don't append the file extension
                 if background:
                     blender_args += ["--background"]                     # Load the file in the background (no UI)
