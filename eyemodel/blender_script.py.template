@@ -249,10 +249,11 @@ camera.sensor_height = camera.sensor_width * input_cam_image_size[1] / input_cam
 camera.lens_unit = 'MILLIMETERS'
 camera.lens = camera.sensor_width * input_cam_focal_length / input_cam_image_size[0]
 camera.dof.focus_distance = input_to_world(input_cam_focus_distance)
-scene.cycles.aperture_fstop = input_cam_fstop # Corrected line
 
+# Set Cycles render settings
+scene.cycles.aperture_fstop = input_cam_fstop
 scene.cycles.samples = input_render_samples
-scene.cycles.seed = input_render_seed % (bpy.types.CyclesRenderSettings.bl_rna.properties['seed'].array_length)
+scene.cycles.seed = input_render_seed % 2147483647  # Max int value for seed
 
 cam_rand = random.Random()
 cam_rand.seed(input_camera_noise_seed)
