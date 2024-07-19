@@ -45,7 +45,7 @@ scene.frame_end = 0
 # Get world eye radius and centre
 # All other locations are translated/scaled to be relative to these
 eye_radius = eyeLbone.bone.length
-eye_centre = armature_matrix*eyeLbone.head
+eye_centre = armature_matrix @ eyeLbone.head
 
 def input_to_world(val):
     scale = eye_radius/input_eye_radius
@@ -69,7 +69,7 @@ def look_at_mat(target, up, pos):
 
 def look_at(obj, target, up, pos, initPoseMat):
     if isinstance(obj, bpy.types.PoseBone):
-        pos = armature_matrix * obj.head
+        pos = armature_matrix @ obj.head
     else:
         pos = obj.location
 
@@ -121,8 +121,8 @@ def fitsphere(points):
 if np:
     eye_cornea_centre, eye_cornea_radius = fitsphere([tuple(v.co) for v in corneaVertices])
     eye_cornea_centre = Vector(eye_cornea_centre)
-    cornea_centre = eyeL.matrix_local * eye_cornea_centre
-    cornea_radius = (eyeL.matrix_local * (eye_cornea_centre+Vector((eye_cornea_radius,0,0))) - cornea_centre).length
+    cornea_centre = eyeL.matrix_local @ eye_cornea_centre
+    cornea_radius = (eyeL.matrix_local @ (eye_cornea_centre + Vector((eye_cornea_radius,0,0))) - cornea_centre).length
 else:
     # If the user doesn't have numpy, don't dynamically calculate cornea params, just use hardcoded
     cornea_centre = input_to_world(Vector([-0.016783643513917923, -5.577363014221191, 0.04836755618453026]))
@@ -131,47 +131,49 @@ else:
 
 
 for obj in list(bpy.data.objects):
-    if obj.type == 'LAMP':
-        scene.objects.unlink(obj)
+    if obj.type == 'LIGHT':
+        for collection in obj.users_collection:
+            collection.objects.unlink(obj)
         bpy.data.objects.remove(obj)
 
+
 # Add lights
-for i,light in enumerate(input_lights):
+for i, light in enumerate(input_lights):
     lamp_type = light.type.upper()
     if lamp_type not in ["SPOT", "SUN"]:
         raise Error("Light type must be 'sun' or 'spot'")
 
-    # Create new lamp datablock
-    lamp_data = bpy.data.lamps.new(name="Lamp.{}".format(i), type=lamp_type)
+    # Create new light datablock
+    light_data = bpy.data.lights.new(name="Light.{}".format(i), type=lamp_type)  # Corrected line
 
-    # Create new object with our lamp datablock
-    lamp_object = bpy.data.objects.new(name="Lamp.{}".format(i), object_data=lamp_data)
+    # Create new object with our light datablock
+    light_object = bpy.data.objects.new(name="Light.{}".format(i), object_data=light_data)  # Corrected line
 
-    # Link lamp object to the scene so it'll appear in this scene
-    scene.objects.link(lamp_object)
+    # Link light object to the scene so it'll appear in this scene
+    scene.collection.objects.link(light_object)  # Corrected line
 
-    lamp_data.use_nodes = True
+    light_data.use_nodes = True
 
-    lamp_object.location = input_to_world(light.location)
-    look_at(lamp_object,
+    light_object.location = input_to_world(light.location)
+    look_at(light_object,
             input_to_world(light.target),
-            input_to_world(input_cam_up) - input_to_world(Vector([0,0,0])),
+            input_to_world(input_cam_up) - input_to_world(Vector([0, 0, 0])),
             light.location,
             Matrix([[-1, 0, 0],
-                    [ 0, 1, 0],
-                    [ 0, 0,-1]]))
+                    [0, 1, 0],
+                    [0, 0, -1]]))
 
-    if lamp_type == "SPOT":    
-        lamp_data.shadow_soft_size = input_to_world(light.size)
-        lamp_data.spot_size = light.view_angle*math.pi/180
-        lamp_data.spot_blend = 1.0
-        lamp_data.show_cone = True
+    if lamp_type == "SPOT":
+        light_data.shadow_soft_size = input_to_world(light.size)
+        light_data.spot_size = light.view_angle * math.pi / 180
+        light_data.spot_blend = 1.0
+        light_data.show_cone = True
 
     if lamp_type == "SUN":
-        lamp_data.shadow_soft_size = 1.0
+        light_data.shadow_soft_size = 1.0
 
-    lamp_data.node_tree.nodes['Emission'].inputs['Strength'].default_value = light.strength
-    lamp_data.cycles.use_multiple_importance_sampling = True
+    light_data.node_tree.nodes['Emission'].inputs['Strength'].default_value = light.strength
+    light_data.cycles.use_multiple_importance_sampling = True
 
 # Remove eye IK constraint
 for c in list(eyeLbone.constraints.values()):
@@ -202,7 +204,7 @@ eyeRblinkbone.location[2] = input_eye_closedness * eyeRblinkbone.constraints['Li
 
 # Calculate base pupil diameter by finding mean distance of pupil vertex to pupil vertex centroid
 pupilGroup = eyeL.vertex_groups['eyepulpex.L']
-pupilVertices = [eyeL.matrix_local * v.co for v in eyeL.data.vertices if pupilGroup.index in [g.group for g in v.groups]]
+pupilVertices = [eyeL.matrix_local @ v.co for v in eyeL.data.vertices if pupilGroup.index in [g.group for g in v.groups]]
 pupilVertexCentre = functools.reduce(lambda x,y: x+y, pupilVertices)/len(pupilVertices)
 pupil_base_radius = sum((v-pupilVertexCentre).length for v in pupilVertices)/len(pupilVertices)
 # Set pupil scale
@@ -221,14 +223,14 @@ pupilRbone.scale = Vector([pupil_scale,1,pupil_scale])
 
 # Calculate iris radius by finding mean distance of iris vertex to iris vertex centroid
 irisGroup = eyeL.vertex_groups['eyeiris.L']
-irisVertices = [eyeL.matrix_local * v.co for v in eyeL.data.vertices if irisGroup.index in [g.group for g in v.groups]]
+irisVertices = [eyeL.matrix_local @ v.co for v in eyeL.data.vertices if irisGroup.index in [g.group for g in v.groups]]
 irisVertexCentre = functools.reduce(lambda x,y: x+y, irisVertices)/len(irisVertices)
 iris_radius = sum((v-irisVertexCentre).length for v in irisVertices)/len(irisVertices)
 
 bpy.data.images['eye texture'].filepath = '//textures\\ireye-{}.png'.format(input_iris)
 
 cornea_material.node_tree.nodes['TrickyGlass'].inputs[
-    cornea_material.node_tree.nodes['TrickyGlass'].inputs.find('IOR') # workaround for blender bug
+    cornea_material.node_tree.nodes['TrickyGlass'].inputs.find('IOR')  # workaround for blender bug
 ].default_value = input_eye_cornea_refrative_index
 
 # Set camera location
@@ -285,7 +287,7 @@ if output_params_path:
             if g.group == pupilGroup.index and g.weight == 1.0:
                 return True
 
-    pupilRealVertices = [eyeL.matrix_local * v.co for v in eyeL_mesh.vertices if isPupil(v)]
+    pupilRealVertices = [eyeL.matrix_local @ v.co for v in eyeL_mesh.vertices if isPupil(v)]
 
     with open(output_params_path, "w") as params_file:
         lines = [
@@ -295,7 +297,7 @@ if output_params_path:
             "cornea_centre = {};".format(mlabVec(world_to_input(cornea_centre))),
             "cornea_radius = {};".format(world_to_input(cornea_radius)),
             "iris_radius = {};".format(world_to_input(iris_radius)),
-            "pupil_centre = {};".format(mlabVec(world_to_input(armature_matrix * eyeLbone.tail))),
+            "pupil_centre = {};".format(mlabVec(world_to_input(armature_matrix @ eyeLbone.tail))),
             "pupil_radius = {};".format(input_pupil_radius),
             "",
             "eye_matrix = {};".format(mlabMat(look_at_mat(pos=input_eye_pos,
@@ -388,13 +390,13 @@ if output_params_path:
             "hold on;",
             "pupil_refracted_vertices = zeros(4,0);",
             "for i=1:size(pupil_vertices, 2)",
-            "    img=eye_find_refraction(eye, camera.trans(:,4), pupil_vertices(:,i));",
+            "    img=eye_find_refraction(eye, camera.trans[:,4], pupil_vertices(:,i));",
             "    if ~isempty(img)",
             "        pupil_refracted_vertices(:,end+1)=img;",
             "    end",
             "end",
             "pupil_points = camera_project(camera, pupil_refracted_vertices);",
-            "pupil_points = pupil_points(:, convhull(pupil_points(1,:)', pupil_points(2,:)'));",
+            "pupil_points = pupil_points[:, convhull(pupil_points(1,:)', pupil_points(2,:)'));",
             "plot(camera.resolution(1)/2 + pupil_points(1,:), camera.resolution(2)/2 - pupil_points(2,:), '-m', 'LineWidth', 1.5);",
         ]
         for i,light in enumerate(input_lights):
