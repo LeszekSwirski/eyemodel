@@ -79,6 +79,18 @@ def get_blender_path():
 
     raise Exception("Blender not found, try setting the BLENDER_PATH environment variable")
 
+def check_blender_version():
+    blender_path = get_blender_path()
+    result = subprocess.run([blender_path, "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    version_output = result.stdout.decode("utf-8")
+    version_match = re.search(r"Blender\s+(\d+\.\d+)", version_output)
+    if version_match:
+        version = version_match.group(1)
+        if not version.startswith("4."):
+            print(f"Blender version {version} detected. Please upgrade to Blender 4.x.")
+    else:
+        print("Unable to determine Blender version. Please ensure Blender is installed correctly.")
+
 
 class Light(collections.namedtuple('Light', ["location", "target", "type", "size", "strength", "view_angle"])):
     def __new__(cls, location, target, type="spot", size=2, strength=2, view_angle=45):
@@ -113,6 +125,7 @@ class Renderer():
         Renderer._renderer_active = False
 
     def __init__(self):
+        check_blender_version()
         Renderer._renderer_active = True
 
         self.eye_radius = 24/2
@@ -318,7 +331,8 @@ class Renderer():
 
                         print("Starting blender")
 
-                        while tout.isAlive() or terr.isAlive():
+                        # while tout.isAlive() or terr.isAlive(): # deprecated in python 3.9
+                        while tout.is_alive() or terr.is_alive():
                             try:
                                 line = q.get(timeout=0.1)
                             except Empty:
