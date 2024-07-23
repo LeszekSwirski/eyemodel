@@ -45,7 +45,7 @@ scene.frame_end = 0
 # Get world eye radius and centre
 # All other locations are translated/scaled to be relative to these
 eye_radius = eyeLbone.bone.length
-eye_centre = armature_matrix @ eyeLbone.head  # Corrected line
+eye_centre = armature_matrix @ eyeLbone.head   
 
 def input_to_world(val):
     scale = eye_radius / input_eye_radius
@@ -69,7 +69,7 @@ def look_at_mat(target, up, pos):
 
 def look_at(obj, target, up, pos, initPoseMat):
     if isinstance(obj, bpy.types.PoseBone):
-        pos = armature_matrix @ obj.head  # Corrected line
+        pos = armature_matrix @ obj.head   
     else:
         pos = obj.location
 
@@ -121,8 +121,8 @@ def fitsphere(points):
 if np:
     eye_cornea_centre, eye_cornea_radius = fitsphere([tuple(v.co) for v in corneaVertices])
     eye_cornea_centre = Vector(eye_cornea_centre)
-    cornea_centre = eyeL.matrix_local @ eye_cornea_centre  # Corrected line
-    cornea_radius = (eyeL.matrix_local @ (eye_cornea_centre + Vector((eye_cornea_radius, 0, 0))) - cornea_centre).length  # Corrected line
+    cornea_centre = eyeL.matrix_local @ eye_cornea_centre   
+    cornea_radius = (eyeL.matrix_local @ (eye_cornea_centre + Vector((eye_cornea_radius, 0, 0))) - cornea_centre).length   
 else:
     # If the user doesn't have numpy, don't dynamically calculate cornea params, just use hardcoded
     cornea_centre = input_to_world(Vector([-0.016783643513917923, -5.577363014221191, 0.04836755618453026]))
@@ -202,7 +202,7 @@ eyeRblinkbone.location[2] = input_eye_closedness * eyeRblinkbone.constraints['Li
 
 # Calculate base pupil diameter by finding mean distance of pupil vertex to pupil vertex centroid
 pupilGroup = eyeL.vertex_groups['eyepulpex.L']
-pupilVertices = [eyeL.matrix_local @ v.co for v in eyeL.data.vertices if pupilGroup.index in [g.group for g in v.groups]]  # Corrected line
+pupilVertices = [eyeL.matrix_local @ v.co for v in eyeL.data.vertices if pupilGroup.index in [g.group for g in v.groups]]   
 pupilVertexCentre = functools.reduce(lambda x, y: x + y, pupilVertices) / len(pupilVertices)
 pupil_base_radius = sum((v - pupilVertexCentre).length for v in pupilVertices) / len(pupilVertices)
 # Set pupil scale
@@ -220,7 +220,7 @@ pupilRbone.scale = Vector([pupil_scale, 1, pupil_scale])
 
 # Calculate iris radius by finding mean distance of iris vertex to iris vertex centroid
 irisGroup = eyeL.vertex_groups['eyeiris.L']
-irisVertices = [eyeL.matrix_local @ v.co for v in eyeL.data.vertices if irisGroup.index in [g.group for g in v.groups]]  # Corrected line
+irisVertices = [eyeL.matrix_local @ v.co for v in eyeL.data.vertices if irisGroup.index in [g.group for g in v.groups]]   
 irisVertexCentre = functools.reduce(lambda x, y: x + y, irisVertices) / len(irisVertices)
 iris_radius = sum((v - irisVertexCentre).length for v in irisVertices) / len(irisVertices)
 
@@ -285,7 +285,7 @@ if output_params_path:
             if g.group == pupilGroup.index and g.weight == 1.0:
                 return True
 
-    pupilRealVertices = [eyeL.matrix_local @ v.co for v in eyeL_mesh.vertices if isPupil(v)]  # Corrected line
+    pupilRealVertices = [eyeL.matrix_local @ v.co for v in eyeL_mesh.vertices if isPupil(v)]   
 
     with open(output_params_path, "w") as params_file:
         lines = [
@@ -295,7 +295,7 @@ if output_params_path:
             "cornea_centre = {};".format(mlabVec(world_to_input(cornea_centre))),
             "cornea_radius = {};".format(world_to_input(cornea_radius)),
             "iris_radius = {};".format(world_to_input(iris_radius)),
-            "pupil_centre = {};".format(mlabVec(world_to_input(armature_matrix @ eyeLbone.tail))),  # Corrected line
+            "pupil_centre = {};".format(mlabVec(world_to_input(armature_matrix @ eyeLbone.tail))),   
             "pupil_radius = {};".format(input_pupil_radius),
             "",
             "eye_matrix = {};".format(mlabMat(look_at_mat(pos=input_eye_pos,
